@@ -76,6 +76,13 @@ public class BitmexStreamingMarketDataService implements StreamingMarketDataServ
         return streamingService.subscribeBitmexChannel(channelName).map(s -> s.toBitmexTicker());
     }
 
+    public Observable<Ticker> get1MinTicker(CurrencyPair currencyPair, Object... args) {
+        String instrument = getBitmexSymbol(currencyPair);
+        String channelName = String.format("tradeBin1m:%s", instrument);
+
+        return streamingService.subscribeBitmexChannel(channelName).map(s -> s.toBitmexTradeBucketed().toTicker());
+    }
+
     @Override
     public Observable<Ticker> getTicker(CurrencyPair currencyPair, Object... args) {
         String instrument = getBitmexSymbol(currencyPair);

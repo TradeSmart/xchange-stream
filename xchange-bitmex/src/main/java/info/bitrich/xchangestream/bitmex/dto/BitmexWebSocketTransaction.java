@@ -53,6 +53,16 @@ public class BitmexWebSocketTransaction {
         return bitmexTicker;
     }
 
+    public BitmexTradeBucketed toBitmexTradeBucketed() {
+        BitmexTradeBucketed bitmexTradeBucketed = null;
+        try {
+            bitmexTradeBucketed = mapper.treeToValue(data.get(0), BitmexTradeBucketed.class);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return bitmexTradeBucketed;
+    }
+
     public BitmexTrade[] toBitmexTrades() {
         BitmexTrade[] trades = new BitmexTrade[data.size()];
         for (int i = 0; i < data.size(); i++) {
