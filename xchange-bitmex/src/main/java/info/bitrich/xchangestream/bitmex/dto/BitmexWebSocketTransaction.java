@@ -92,6 +92,21 @@ public class BitmexWebSocketTransaction {
         return orders;
     }
 
+    public BitmexExecution[] toBitmexExecutions() {
+        BitmexExecution[] executions = new BitmexExecution[this.data.size()];
+        for(int i = 0; i < this.data.size(); ++i) {
+            JsonNode jsonOrder = this.data.get(i);
+
+            try {
+                executions[i] = (BitmexExecution) this.mapper.readValue(jsonOrder.toString(), BitmexExecution.class);
+            } catch (IOException var5) {
+                var5.printStackTrace();
+            }
+        }
+
+        return executions;
+    }
+
     public BitmexFunding toBitmexFunding() {
         BitmexFunding funding = null;
         try {
