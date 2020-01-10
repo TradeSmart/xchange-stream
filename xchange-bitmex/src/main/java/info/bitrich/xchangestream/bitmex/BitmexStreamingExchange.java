@@ -3,7 +3,7 @@ package info.bitrich.xchangestream.bitmex;
 import info.bitrich.xchangestream.core.ProductSubscription;
 import info.bitrich.xchangestream.core.StreamingExchange;
 import info.bitrich.xchangestream.core.StreamingMarketDataService;
-import io.netty.channel.ChannelHandlerContext;
+import info.bitrich.xchangestream.core.StreamingTradeService;
 import io.reactivex.Completable;
 import io.reactivex.Observable;
 import org.knowm.xchange.ExchangeSpecification;
@@ -18,6 +18,7 @@ public class BitmexStreamingExchange extends BitmexExchange implements Streaming
 
     private BitmexStreamingService streamingService;
     private BitmexStreamingMarketDataService streamingMarketDataService;
+    private BitmexStreamingTradeService streamingTradeService;
 
     public BitmexStreamingExchange() {
     }
@@ -27,6 +28,7 @@ public class BitmexStreamingExchange extends BitmexExchange implements Streaming
         super.initServices();
         streamingService = createStreamingService();
         streamingMarketDataService = new BitmexStreamingMarketDataService(streamingService, this);
+        streamingTradeService = new BitmexStreamingTradeService(streamingService);
     }
 
     @Override
@@ -68,6 +70,11 @@ public class BitmexStreamingExchange extends BitmexExchange implements Streaming
     @Override
     public Observable<Object> connectionSuccess() {
         return streamingService.subscribeConnectionSuccess();
+    }
+
+    @Override
+    public StreamingTradeService getStreamingTradeService() {
+        return streamingTradeService;
     }
 
     @Override

@@ -8,15 +8,11 @@ import info.bitrich.xchangestream.bitmex.dto.BitmexMarketDataEvent;
 import info.bitrich.xchangestream.bitmex.dto.BitmexWebSocketSubscriptionMessage;
 import info.bitrich.xchangestream.bitmex.dto.BitmexWebSocketTransaction;
 import info.bitrich.xchangestream.service.netty.JsonNettyStreamingService;
-import io.netty.handler.codec.http.DefaultHttpHeaders;
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketClientExtensionHandler;
-import io.reactivex.Completable;
-import io.reactivex.CompletableSource;
 import io.reactivex.Observable;
 import io.reactivex.ObservableEmitter;
 import io.reactivex.disposables.Disposable;
 import io.reactivex.schedulers.Schedulers;
-import org.knowm.xchange.bitmex.service.BitmexDigest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -46,43 +42,36 @@ public class BitmexStreamingService extends JsonNettyStreamingService {
     private long dmsCancelTime;
     private Disposable dmsDisposable;
 
+    private static final int AUTH_DURATION_SECONDS = 10;
+    private Integer currentAuthExpiry = null;
+
     public BitmexStreamingService(String apiUrl, String apiKey, String secretKey) {
         super(apiUrl, Integer.MAX_VALUE);
         this.apiKey = apiKey;
         this.secretKey = secretKey;
     }
 
-    private void login() throws JsonProcessingException {
-        long expires = System.currentTimeMillis() + 30;
+    public void checkAuth() throws JsonProcessingException {
+        if (currentAuthExpiry != null && currentAuthExpiry > System.currentTimeMillis() / 1000) {
+            return;
+        }
+        long expires = (System.currentTimeMillis() / 1000) + AUTH_DURATION_SECONDS;
         String path = "/realtime";
-        String signature = BitmexAuthenticator.generateSignature(secretKey,
-                "GET", path, String.valueOf(expires), "");
+        String signature = BitmexAuthenticator.generateSignature(
+                path,
+                "GET",
+                "",
+                secretKey,
+                String.valueOf(expires)
+        );
 
         List<Object> args = Arrays.asList(apiKey, expires, signature);
 
         Map<String, Object> cmd = new HashMap<>();
-        cmd.put("op", "authKey");
+        cmd.put("op", "authKeyExpires");
         cmd.put("args", args);
         this.sendMessage(mapper.writeValueAsString(cmd));
 
-    }
-
-    @Override
-    public Completable connect() {
-        // Note that we must override connect method in streaming service instead of streaming exchange, because of the auto reconnect feature of NettyStreamingService.
-        // We must ensure the authentication message is also resend when the connection is rebuilt.
-        Completable conn = super.connect();
-        if (apiKey == null) {
-            return conn;
-        }
-        return conn.andThen((CompletableSource) (completable) -> {
-            try {
-                login();
-                completable.onComplete();
-            } catch (IOException e) {
-                completable.onError(e);
-            }
-        });
     }
 
     @Override
@@ -161,24 +150,6 @@ public class BitmexStreamingService extends JsonNettyStreamingService {
             return transaction;
         })
                 .share();
-    }
-
-    @Override
-    protected DefaultHttpHeaders getCustomHeaders() {
-        DefaultHttpHeaders customHeaders = super.getCustomHeaders();
-        if (secretKey == null || apiKey == null) {
-            return customHeaders;
-        }
-        long expires = System.currentTimeMillis() / 1000 + 5;
-
-        BitmexDigest bitmexDigester = BitmexDigest.createInstance(secretKey, apiKey);
-        String stringToDigest = "GET/realtime" + expires;
-        String signature = bitmexDigester.digestString(stringToDigest);
-
-        customHeaders.add("api-nonce", expires);
-        customHeaders.add("api-key", apiKey);
-        customHeaders.add("api-signature", signature);
-        return customHeaders;
     }
 
     @Override
