@@ -1,0 +1,15 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      java: corretto11
+    commands:
+      # It will be possible to remove these steps once newer AWS CLI versions are made available
+      - curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+      - unzip awscliv2.zip > /dev/null
+      - ./aws/install
+  build:
+    commands:
+        - export CODEARTIFACT_AUTH_TOKEN=`/usr/local/bin/aws codeartifact get-authorization-token --domain "${CODEARTIFACT_DOMAIN}" --domain-owner "${AWS_ACCOUNT_ID}" --query authorizationToken --output text`
+        - mvn -s settings.xml package deploy -e
